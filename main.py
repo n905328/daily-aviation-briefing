@@ -1,27 +1,26 @@
 import os, json, smtplib, feedparser, requests, gspread
+import google.generativeai as genai
 from bs4 import BeautifulSoup
-from anthropic import Anthropic
 from google.oauth2.service_account import Credentials
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import date
-import google.generativeai as genai
 
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
-    "https://skybrary.aero/",
-    "https://avherald.com/feed", 
-    "http://feeds.bbci.co.uk/news/technology/rss.xml",  # BBC Tech（含航空）
-    "http://rss.cnn.com/rss/edition.rss",               # CNN 全站
+    "http://feeds.bbci.co.uk/news/technology/rss.xml",
+    "http://rss.cnn.com/rss/edition.rss",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
 GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_PASS = os.environ["GMAIL_APP_PASSWORD"]
-client = Anthropic()
 
-# ── Google Sheet 讀取待讀URL ───────────────────────
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ── Google Sheet ───────────────────────────────────
 def get_sheet():
     creds_json = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
     creds = Credentials.from_service_account_info(
@@ -34,7 +33,7 @@ def get_sheet():
 def get_pending_urls(sheet):
     rows = sheet.get_all_values()
     pending = []
-    for i, row in enumerate(rows[1:], start=2):  # 跳過標題列
+    for i, row in enumerate(rows[1:], start=2):
         if len(row) >= 2 and row[1].strip() == "待處理" and row[0].strip():
             pending.append((i, row[0].strip()))
     return pending
@@ -53,22 +52,21 @@ def fetch_text(url):
     except:
         return ""
 
-# ── Gemini 翻譯+摘要 ──────────────────────────────
-
+# ── 航空相關過濾 ───────────────────────────────────
 def is_aviation_related(title, text):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content(
-        f"這篇新聞標題是：{title}\n內文前500字：{text[:500]}\n"
-        f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
-    )
-    return "yes" in response.text.lower()
+    try:
+        response = model.generate_content(
+            f"這篇新聞標題是：{title}\n內文前500字：{text[:500]}\n"
+            f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
+        )
+        return "yes" in response.text.lower()
+    except:
+        return False
 
-
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-
+# ── Gemini 翻譯+摘要 ──────────────────────────────
 def summarize(title, text):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    prompt = f"""以下是一篇航空新聞，請用繁體中文輸出：
+    try:
+        prompt = f"""以下是一篇航空新聞，請用繁體中文輸出：
 
 標題：{title}
 內文：{text}
@@ -77,24 +75,28 @@ def summarize(title, text):
 【中文標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
-    
-    response = model.generate_content(prompt)
-    return response.text
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"摘要失敗：{e}"
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
     articles = []
     for url in RSS_FEEDS:
-        feed = feedparser.parse(url)
-        for entry in feed.entries[:5]:  # 每個來源最多取5篇
-            articles.append({
-                "title": entry.get("title", ""),
-                "url": entry.get("link", ""),
-                "source": feed.feed.get("title", url)
-            })
+        try:
+            feed = feedparser.parse(url)
+            for entry in feed.entries[:5]:
+                articles.append({
+                    "title": entry.get("title", ""),
+                    "url": entry.get("link", ""),
+                    "source": feed.feed.get("title", url)
+                })
+        except:
+            continue
     return articles
 
-# ── 組合 Email ────────────────────────────────────
+# ── 寄 Email ──────────────────────────────────────
 def send_email(sections):
     today = date.today().strftime("%Y/%m/%d")
     body = f"<h2>✈️ 航空情報日報 {today}</h2><hr>"
@@ -119,7 +121,7 @@ def main():
     sheet = get_sheet()
     sections = []
 
-    # 處理手動丟的URL
+    # 手動丟的 URL
     pending = get_pending_urls(sheet)
     for row_idx, url in pending:
         text = fetch_text(url)
@@ -128,10 +130,10 @@ def main():
             sections.append({"source": "📌 手動加入", "url": url, "summary": summary})
             mark_done(sheet, row_idx)
 
-    # 處理 RSS
+    # RSS（含航空過濾）
     for article in fetch_rss():
         text = fetch_text(article["url"])
-        if text and is_aviation_related(article["title"], text): 
+        if text and is_aviation_related(article["title"], text):
             summary = summarize(article["title"], text)
             sections.append({"source": article["source"], "url": article["url"], "summary": summary})
 
