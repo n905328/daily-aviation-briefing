@@ -140,7 +140,8 @@ def save_processed_url(sheet_file, url):
 
 
 
-# ── 主流程 ────────────────────────────────────────
+# 主流程 
+
 def main():
     print("開始執行")
     sf = get_sheet()
@@ -149,9 +150,9 @@ def main():
     print(f"已處理URL數：{len(processed)}")
     sections = []
 
+    # 手動 URL
     pending = get_pending_urls(sheet)
     print(f"待處理URL數：{len(pending)}")
-
     for row_idx, url in pending:
         if url in processed:
             mark_done(sheet, row_idx)
@@ -163,14 +164,23 @@ def main():
             mark_done(sheet, row_idx)
             save_processed_url(sf, url)
 
-    for article in fetch_rss():
+    # RSS（含 debug）
+    articles = fetch_rss()
+    print(f"RSS抓到文章數：{len(articles)}")
+    for article in articles:
+        print(f"  - [{article['source']}] {article['title']}")
         if article["url"] in processed:
+            print(f"    → 已處理，跳過")
             continue
         text = fetch_text(article["url"])
-        if text and is_aviation_related(article["title"], text):
-            summary = summarize(article["title"], text)
-            sections.append({"source": article["source"], "url": article["url"], "summary": summary})
-            save_processed_url(sf, article["url"])
+        print(f"    → 爬到內文長度：{len(text)}")
+        if text:
+            related = is_aviation_related(article["title"], text)
+            print(f"    → 航空相關：{related}")
+            if related:
+                summary = summarize(article["title"], text)
+                sections.append({"source": article["source"], "url": article["url"], "summary": summary})
+                save_processed_url(sf, article["url"])
 
     print(f"處理完成，共 {len(sections)} 篇")
     if sections:
@@ -178,7 +188,6 @@ def main():
         print("信件已寄出")
     else:
         print("沒有新文章，不寄信")
-
 
 if __name__ == "__main__":
     main()
