@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from datetime import date
+import google.generativeai as genai
 
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
@@ -51,7 +52,11 @@ def fetch_text(url):
         return ""
 
 # ── Claude 翻譯+摘要 ──────────────────────────────
+
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
 def summarize(title, text):
+    model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = f"""以下是一篇航空新聞，請用繁體中文輸出：
 
 標題：{title}
@@ -61,13 +66,9 @@ def summarize(title, text):
 【中文標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
-
-    msg = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=500,
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return msg.content[0].text
+    
+    response = model.generate_content(prompt)
+    return response.text
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
