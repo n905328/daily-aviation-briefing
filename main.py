@@ -59,7 +59,7 @@ def is_aviation_related(title, text):
             f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
         )
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash-8b",
             contents=prompt
         )
         return "yes" in response.text.lower()
@@ -79,7 +79,7 @@ def summarize(title, text):
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash-8b",
             contents=prompt
         )
         return response.text
