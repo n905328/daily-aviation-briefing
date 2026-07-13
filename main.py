@@ -176,3 +176,7 @@ def main():
         print("信件已寄出")
     else:
         print("沒有新文章，不寄信")
+
+
+if __name__ == "__main__":
+    main()
