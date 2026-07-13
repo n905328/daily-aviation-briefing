@@ -1,5 +1,5 @@
 import os, json, smtplib, feedparser, requests, gspread
-import google.generativeai as genai
+from google import genai
 from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
 from email.mime.multipart import MIMEMultipart
@@ -17,8 +17,7 @@ SHEET_ID = os.environ["SHEET_ID"]
 GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_PASS = os.environ["GMAIL_APP_PASSWORD"]
 
-genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # ── Google Sheet ───────────────────────────────────
 def get_sheet():
@@ -55,9 +54,13 @@ def fetch_text(url):
 # ── 航空相關過濾 ───────────────────────────────────
 def is_aviation_related(title, text):
     try:
-        response = model.generate_content(
+        prompt = (
             f"這篇新聞標題是：{title}\n內文前500字：{text[:500]}\n"
             f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
+        )
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
         )
         return "yes" in response.text.lower()
     except:
@@ -75,10 +78,14 @@ def summarize(title, text):
 【中文標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
         return response.text
     except Exception as e:
         return f"摘要失敗：{e}"
+        
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
