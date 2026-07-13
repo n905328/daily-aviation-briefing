@@ -140,13 +140,16 @@ def save_processed_url(sheet_file, url):
 
 # ── 主流程 ────────────────────────────────────────
 def main():
+    print("開始執行")
     sf = get_sheet()
     sheet = sf.sheet1
     processed = get_processed_urls(sf)
+    print(f"已處理URL數：{len(processed)}")
     sections = []
 
-    # 手動 URL
     pending = get_pending_urls(sheet)
+    print(f"待處理URL數：{len(pending)}")
+
     for row_idx, url in pending:
         if url in processed:
             mark_done(sheet, row_idx)
@@ -158,7 +161,6 @@ def main():
             mark_done(sheet, row_idx)
             save_processed_url(sf, url)
 
-    # RSS
     for article in fetch_rss():
         if article["url"] in processed:
             continue
@@ -168,8 +170,9 @@ def main():
             sections.append({"source": article["source"], "url": article["url"], "summary": summary})
             save_processed_url(sf, article["url"])
 
+    print(f"處理完成，共 {len(sections)} 篇")
     if sections:
         send_email(sections)
-        print(f"完成，共處理 {len(sections)} 篇")
+        print("信件已寄出")
     else:
-        print("今天沒有新文章")
+        print("沒有新文章，不寄信")
