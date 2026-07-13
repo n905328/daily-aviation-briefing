@@ -11,7 +11,9 @@ import google.generativeai as genai
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
     "https://skybrary.aero/",
-    "https://avherald.com/feed",      # 可自己增減
+    "https://avherald.com/feed", 
+    "http://feeds.bbci.co.uk/news/technology/rss.xml",  # BBC Tech（含航空）
+    "http://rss.cnn.com/rss/edition.rss",               # CNN 全站
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -51,7 +53,16 @@ def fetch_text(url):
     except:
         return ""
 
-# ── Claude 翻譯+摘要 ──────────────────────────────
+# ── Gemini 翻譯+摘要 ──────────────────────────────
+
+def is_aviation_related(title, text):
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(
+        f"這篇新聞標題是：{title}\n內文前500字：{text[:500]}\n"
+        f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
+    )
+    return "yes" in response.text.lower()
+
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -120,7 +131,7 @@ def main():
     # 處理 RSS
     for article in fetch_rss():
         text = fetch_text(article["url"])
-        if text:
+        if text and is_aviation_related(article["title"], text): 
             summary = summarize(article["title"], text)
             sections.append({"source": article["source"], "url": article["url"], "summary": summary})
 
