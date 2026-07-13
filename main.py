@@ -27,7 +27,7 @@ def get_sheet():
         scopes=["https://www.googleapis.com/auth/spreadsheets",
                 "https://www.googleapis.com/auth/drive"]
     )
-    return gspread.authorize(creds).open_by_key(SHEET_ID).sheet1
+    return gspread.authorize(creds).open_by_key(SHEET_ID)
 
 def get_pending_urls(sheet):
     rows = sheet.get_all_values()
@@ -59,7 +59,7 @@ def is_aviation_related(title, text):
             f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、航空公司、機場、飛行）有關嗎？"
         )
         response = client.models.generate_content(
-            model="gemini-1.5-flash-8b",
+            model="gemini-1.5-flash",
             contents=prompt
         )
         return "yes" in response.text.lower()
@@ -79,7 +79,7 @@ def summarize(title, text):
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
         response = client.models.generate_content(
-            model="gemini-1.5-flash-8b",
+            model="gemini-1.5-flash",
             contents=prompt
         )
         return response.text
@@ -123,32 +123,53 @@ def send_email(sections):
         s.login(GMAIL_USER, GMAIL_PASS)
         s.send_message(msg)
 
+# 去重複
+
+def get_processed_urls(sheet_file):
+    try:
+        ws = sheet_file.worksheet("已處理")
+    except:
+        ws = sheet_file.add_worksheet("已處理", rows=1000, cols=1)
+    return set(row[0] for row in ws.get_all_values() if row)
+
+def save_processed_url(sheet_file, url):
+    ws = sheet_file.worksheet("已處理")
+    ws.append_row([url])
+
+
+
 # ── 主流程 ────────────────────────────────────────
 def main():
-    sheet = get_sheet()
+    sf = get_sheet()
+    sheet = sf.sheet1
+    processed = get_processed_urls(sf)
     sections = []
 
-    # 手動丟的 URL
+    # 手動 URL
     pending = get_pending_urls(sheet)
     for row_idx, url in pending:
+        if url in processed:
+            mark_done(sheet, row_idx)
+            continue
         text = fetch_text(url)
         if text:
             summary = summarize(url, text)
             sections.append({"source": "📌 手動加入", "url": url, "summary": summary})
             mark_done(sheet, row_idx)
+            save_processed_url(sf, url)
 
-    # RSS（含航空過濾）
+    # RSS
     for article in fetch_rss():
+        if article["url"] in processed:
+            continue
         text = fetch_text(article["url"])
         if text and is_aviation_related(article["title"], text):
             summary = summarize(article["title"], text)
             sections.append({"source": article["source"], "url": article["url"], "summary": summary})
+            save_processed_url(sf, article["url"])
 
     if sections:
         send_email(sections)
         print(f"完成，共處理 {len(sections)} 篇")
     else:
         print("今天沒有新文章")
-
-if __name__ == "__main__":
-    main()
