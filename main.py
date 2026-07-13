@@ -9,6 +9,7 @@ from datetime import date
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
+    "https://skybrary.aero/",
     "https://avherald.com/feed",      # 可自己增減
 ]
 
