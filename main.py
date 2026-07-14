@@ -63,7 +63,8 @@ def summarize(title, text):
 內文：{text}
 
 請依以下格式輸出：
-【中文標題】（翻譯標題）
+
+【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
         response = client.models.generate_content(
