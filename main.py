@@ -1,7 +1,5 @@
 import os, json, smtplib, feedparser, requests, gspread
 from google import genai
-from google.genai import types
-import httpx
 from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
 from email.mime.multipart import MIMEMultipart
@@ -11,10 +9,10 @@ from datetime import date
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
-    "https://www.aviationpros.com/rss/",           # 地勤/機場維修
-    "https://feeds.feedburner.com/AirlineGeeks",   # Airline Geeks
-    "https://www.ch-aviation.com/portal/rss",      # 機隊/航線動態
-    "https://theaircurrent.com/feed/",             # 深度分析
+    "https://www.aviationpros.com/rss/",
+    "https://feeds.feedburner.com/AirlineGeeks",
+    "https://www.ch-aviation.com/portal/rss",
+    "https://theaircurrent.com/feed/",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -55,22 +53,6 @@ def fetch_text(url):
     except:
         return ""
 
-
-# ── 航空相關過濾 ───────────────────────────────────
-def is_aviation_related(title, text):
-    try:
-        prompt = (
-            f"這篇新聞標題是：{title}\n內文前500字：{text[:500]}\n"
-            f"請只回答 yes 或 no：這篇新聞跟航空業（飛機、飛行安全、航空公司、機場、飛行）有關嗎？"
-        )
-        response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
-            contents=prompt
-        )
-        return "yes" in response.text.lower()
-    except:
-        return False
-
 # ── Gemini 翻譯+摘要 ──────────────────────────────
 def summarize(title, text):
     try:
@@ -84,13 +66,12 @@ def summarize(title, text):
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="models/gemini-1.5-flash",
             contents=prompt
         )
         return response.text
     except Exception as e:
         return f"摘要失敗：{e}"
-        
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
@@ -103,7 +84,7 @@ def fetch_rss():
                     "title": entry.get("title", ""),
                     "url": entry.get("link", ""),
                     "source": feed.feed.get("title", url),
-                    "summary_raw": entry.get("summary", "")  # 加這行
+                    "summary_raw": entry.get("summary", "")
                 })
         except:
             continue
@@ -129,8 +110,7 @@ def send_email(sections):
         s.login(GMAIL_USER, GMAIL_PASS)
         s.send_message(msg)
 
-# 去重複
-
+# ── 去重複 ────────────────────────────────────────
 def get_processed_urls(sheet_file):
     try:
         ws = sheet_file.worksheet("已處理")
@@ -142,10 +122,7 @@ def save_processed_url(sheet_file, url):
     ws = sheet_file.worksheet("已處理")
     ws.append_row([url])
 
-
-
-# 主流程 
-
+# ── 主流程 ────────────────────────────────────────
 def main():
     print("開始執行")
     sf = get_sheet()
@@ -168,30 +145,21 @@ def main():
             mark_done(sheet, row_idx)
             save_processed_url(sf, url)
 
-    # RSS（含 debug）
+    # RSS
     articles = fetch_rss()
     print(f"RSS抓到文章數：{len(articles)}")
     for article in articles:
+        print(f"  - {article['title']}")
         if article["url"] in processed:
+            print(f"    → 已處理，跳過")
             continue
         text = fetch_text(article["url"])
-        # 爬不到就用 RSS 內建摘要
         content = text if len(text) > 200 else article.get("summary_raw", "")
+        print(f"    → 內容長度：{len(content)}")
         if content:
-            related = is_aviation_related(article["title"], content)
-            if related:
-                summary = summarize(article["title"], content)
-                sections.append(...)
-                save_processed_url(sf, article["url"])
-        text = fetch_text(article["url"])
-        print(f"    → 爬到內文長度：{len(text)}")
-        if text:
-            related = is_aviation_related(article["title"], text)
-            print(f"    → 航空相關：{related}")
-            if related:
-                summary = summarize(article["title"], text)
-                sections.append({"source": article["source"], "url": article["url"], "summary": summary})
-                save_processed_url(sf, article["url"])
+            summary = summarize(article["title"], content)
+            sections.append({"source": article["source"], "url": article["url"], "summary": summary})
+            save_processed_url(sf, article["url"])
 
     print(f"處理完成，共 {len(sections)} 篇")
     if sections:
