@@ -11,8 +11,10 @@ from datetime import date
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
-    "http://feeds.bbci.co.uk/news/technology/rss.xml",
-    "http://rss.cnn.com/rss/edition.rss",
+    "https://www.aviationpros.com/rss/",           # 地勤/機場維修
+    "https://feeds.feedburner.com/AirlineGeeks",   # Airline Geeks
+    "https://www.ch-aviation.com/portal/rss",      # 機隊/航線動態
+    "https://theaircurrent.com/feed/",             # 深度分析
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -52,6 +54,7 @@ def fetch_text(url):
         return soup.get_text(separator=" ", strip=True)[:4000]
     except:
         return ""
+
 
 # ── 航空相關過濾 ───────────────────────────────────
 def is_aviation_related(title, text):
@@ -99,7 +102,8 @@ def fetch_rss():
                 articles.append({
                     "title": entry.get("title", ""),
                     "url": entry.get("link", ""),
-                    "source": feed.feed.get("title", url)
+                    "source": feed.feed.get("title", url),
+                    "summary_raw": entry.get("summary", "")  # 加這行
                 })
         except:
             continue
@@ -168,10 +172,17 @@ def main():
     articles = fetch_rss()
     print(f"RSS抓到文章數：{len(articles)}")
     for article in articles:
-        print(f"  - [{article['source']}] {article['title']}")
         if article["url"] in processed:
-            print(f"    → 已處理，跳過")
             continue
+        text = fetch_text(article["url"])
+        # 爬不到就用 RSS 內建摘要
+        content = text if len(text) > 200 else article.get("summary_raw", "")
+        if content:
+            related = is_aviation_related(article["title"], content)
+            if related:
+                summary = summarize(article["title"], content)
+                sections.append(...)
+                save_processed_url(sf, article["url"])
         text = fetch_text(article["url"])
         print(f"    → 爬到內文長度：{len(text)}")
         if text:
