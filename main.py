@@ -1,5 +1,6 @@
 import os, json, smtplib, feedparser, requests, gspread
 from google import genai
+from google.genai import types
 from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
 from email.mime.multipart import MIMEMultipart
