@@ -2,7 +2,7 @@ name: Daily Aviation Briefing
 
 on:
   schedule:
-    - cron: '10 13 * * *'  # 台灣時間每天下午13:10
+    - cron: '10 5 * * *'  # 台灣時間每天下午13:10
   workflow_dispatch:        # 也可以手動觸發測試
 
 jobs:
