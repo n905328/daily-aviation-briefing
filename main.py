@@ -66,7 +66,8 @@ def summarize(title, text):
 
 【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
-【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）"""
+【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
+【潛在提問】（1-3個問題，並附上建議作答方向/引導思考）"""
         response = client.models.generate_content(
             model="gemini-3.1-flash-lite",
             contents=prompt
