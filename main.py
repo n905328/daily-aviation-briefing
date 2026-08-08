@@ -9,11 +9,11 @@ from datetime import date
 
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
+    "https://theaircurrent.com/feed/",
     "https://simpleflying.com/feed/",
     "https://www.aviationpros.com/rss/",
     "https://feeds.feedburner.com/AirlineGeeks",
     "https://www.ch-aviation.com/portal/rss",
-    "https://theaircurrent.com/feed/",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -62,7 +62,7 @@ def summarize(title, text):
 標題：{title}
 內文：{text}
 
-請依以下格式輸出：
+請依以下格式輸出，不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號），若要增加格式，可以使用html：
 
 【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
@@ -82,7 +82,7 @@ def fetch_rss():
     for url in RSS_FEEDS:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
+            for entry in feed.entries[:10]:
                 articles.append({
                     "title": entry.get("title", ""),
                     "url": entry.get("link", ""),
@@ -93,6 +93,25 @@ def fetch_rss():
             continue
     return articles
 
+# 過濾非民航新聞
+
+def is_aviation_related(title, text):
+    try:
+        prompt = (
+            f"標題：{title}\n內容：{text[:500]}\n"
+            f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
+            f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
+            f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
+        )
+        response = client.models.generate_content(
+            model="models/gemini-1.5-flash",
+            contents=prompt
+        )
+        return "yes" in response.text.lower()
+    except:
+        return True  # 出錯的話預設放行，不要漏掉
+
+
 # ── 寄 Email ──────────────────────────────────────
 def send_email(sections):
     today = date.today().strftime("%Y/%m/%d")
@@ -100,7 +119,7 @@ def send_email(sections):
     for s in sections:
         body += f"""
 <p><b>來源：</b>{s['source']} ｜ <a href="{s['url']}">{s['url']}</a></p>
-<pre style="font-family:sans-serif;white-space:pre-wrap">{s['summary']}</pre>
+<p style="font-family:sans-serif; line-height:1.8">{s['summary'].replace(chr(10), '<br>')}</p>
 <hr>"""
 
     msg = MIMEMultipart("alternative")
@@ -160,9 +179,13 @@ def main():
         content = text if len(text) > 200 else article.get("summary_raw", "")
         print(f"    → 內容長度：{len(content)}")
         if content:
-            summary = summarize(article["title"], content)
-            sections.append({"source": article["source"], "url": article["url"], "summary": summary})
-            save_processed_url(sf, article["url"])
+            if is_aviation_related(article["title"], content):
+                summary = summarize(article["title"], content)
+                sections.append(...)
+                save_processed_url(sf, article["url"])
+            else:
+                print(f"    → 非民航相關，跳過")
+                save_processed_url(sf, article["url"])  # 一樣記錄避免重複判斷
 
     print(f"處理完成，共 {len(sections)} 篇")
     if sections:
