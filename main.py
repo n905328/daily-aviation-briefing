@@ -14,6 +14,7 @@ RSS_FEEDS = [
     "https://www.aviationpros.com/rss/",
     "https://feeds.feedburner.com/AirlineGeeks",
     "https://www.ch-aviation.com/portal/rss",
+    "https://avherald.com/h?subscribe=newsfeed&opt=0&lang=0",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -54,6 +55,23 @@ def fetch_text(url):
     except:
         return ""
 
+# ── 過濾非民航新聞 ────────────────────────────────
+def is_aviation_related(title, text):
+    try:
+        prompt = (
+            f"標題：{title}\n內容：{text[:500]}\n"
+            f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
+            f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
+            f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
+        )
+        response = client.models.generate_content(
+            model="models/gemini-1.5-flash",
+            contents=prompt
+        )
+        return "yes" in response.text.lower()
+    except:
+        return True
+
 # ── Gemini 翻譯+摘要 ──────────────────────────────
 def summarize(title, text):
     try:
@@ -62,14 +80,14 @@ def summarize(title, text):
 標題：{title}
 內文：{text}
 
-請依以下格式輸出，不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號），若要增加格式，可以使用html：
+請依以下格式輸出，不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號），若要增加格式，可以使用 HTML：
 
 【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
 【潛在提問】（1-3個問題，並附上建議作答方向/引導思考）"""
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="models/gemini-1.5-flash",
             contents=prompt
         )
         return response.text
@@ -92,25 +110,6 @@ def fetch_rss():
         except:
             continue
     return articles
-
-# 過濾非民航新聞
-
-def is_aviation_related(title, text):
-    try:
-        prompt = (
-            f"標題：{title}\n內容：{text[:500]}\n"
-            f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
-            f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
-            f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
-        )
-        response = client.models.generate_content(
-            model="models/gemini-1.5-flash",
-            contents=prompt
-        )
-        return "yes" in response.text.lower()
-    except:
-        return True  # 出錯的話預設放行，不要漏掉
-
 
 # ── 寄 Email ──────────────────────────────────────
 def send_email(sections):
@@ -181,11 +180,11 @@ def main():
         if content:
             if is_aviation_related(article["title"], content):
                 summary = summarize(article["title"], content)
-                sections.append(...)
+                sections.append({"source": article["source"], "url": article["url"], "summary": summary})
                 save_processed_url(sf, article["url"])
             else:
                 print(f"    → 非民航相關，跳過")
-                save_processed_url(sf, article["url"])  # 一樣記錄避免重複判斷
+                save_processed_url(sf, article["url"])
 
     print(f"處理完成，共 {len(sections)} 篇")
     if sections:
