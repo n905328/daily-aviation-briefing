@@ -168,7 +168,7 @@ def summarize(title, text):
 1. 問題1，引導1
 2. 問題2，引導2
 3. 問題3，引導3"""
-    return call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite")
+    return call_gemini(prompt, primary="gemini-3.6-flash", fallback="gemini-3.5-flash")
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
@@ -190,7 +190,7 @@ def fetch_rss():
 # ── 寄 Email ──────────────────────────────────────
 def send_email(sections):
     today = date.today().strftime("%Y/%m/%d")
-    body = f"<h2>✈️ 航空情報日報 {today}</h2><hr>"
+    body = f"<h2>✈️ 航空時事日報 {today}</h2><hr>"
     for s in sections:
         body += f"""
 <p><b>來源：</b>{s['source']} ｜ <a href="{s['url']}">{s['url']}</a></p>
@@ -198,7 +198,7 @@ def send_email(sections):
 <hr>"""
 
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"✈️ 航空情報日報 {today}"
+    msg["Subject"] = f"✈️ 航空時事日報 {today}"
     msg["From"] = GMAIL_USER
     msg["To"] = GMAIL_USER
     msg.attach(MIMEText(body, "html"))
