@@ -9,11 +9,11 @@ from datetime import date
 
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
-    "https://simpleflying.com/feed/",
+    "https://worldairlinenews.com/feed",
     "https://asianaviation.com/feed/",
     "https://airlinereporter.com/feed",
     "https://theaircurrent.com/feed/",
-    "https://worldairlinenews.com/feed",
+    "https://simpleflying.com/feed/",
     "https://feeds.feedburner.com/AirlineGeeks",
     "https://www.ch-aviation.com/portal/rss",
 ]
