@@ -20,6 +20,11 @@ RSS_FEEDS = [
 
 BCC_LIST = [
     "wsj2343@gmail.com",
+    "johnazzan@gmail.com",
+    "Chen.bibi.silvia@gmail.com",
+    "joycetseng0525@gmail.com",
+    "cmt84701369@gmail.com",
+    "yunyunwang0222@gmail.com",
 ]
 
 MAX_ARTICLES_PER_FEED = 15
