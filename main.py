@@ -11,11 +11,10 @@ from datetime import date
 RSS_FEEDS = [
     "https://worldairlinenews.com/feed",
     "https://asianaviation.com/feed/",
+    "https://simpleflying.com/feed/",
     "https://airlinereporter.com/feed",
     "https://theaircurrent.com/feed/",
-    "https://simpleflying.com/feed/",
     "https://feeds.feedburner.com/AirlineGeeks",
-    "https://www.ch-aviation.com/portal/rss",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -70,23 +69,73 @@ def mark_done(sheet, row_index):
 # ── 爬取內文 ──────────────────────────────────────
 def fetch_text(url):
     try:
-        r = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        r = requests.get(
+            url,
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        r.raise_for_status()
+
         soup = BeautifulSoup(r.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer", "header"]):
+
+        # 移除明確不是文章內容的元素
+        for tag in soup([
+            "script",
+            "style",
+            "nav",
+            "footer",
+            "header",
+            "aside",
+            "form",
+            "noscript",
+            "iframe"
+        ]):
             tag.decompose()
-        return soup.get_text(separator=" ", strip=True)[:4000]
-    except:
+
+        # 優先抓 <article>
+        content = soup.find("article")
+
+        # 如果沒有 <article>，再找常見的文章容器
+        if not content:
+            content = (
+                soup.select_one(".entry-content")
+                or soup.select_one(".post-content")
+                or soup.select_one(".article-content")
+                or soup.select_one(".article-body")
+                or soup.select_one("main")
+            )
+
+        # 最後才退回整頁
+        if not content:
+            content = soup
+
+        # 只移除非常明確的非正文區塊
+        for tag in content.select(
+            ".advertisement, .advertising, .ads, "
+            ".newsletter, .subscribe, "
+            ".social-share, .share-buttons, "
+            ".related-posts, .comments"
+        ):
+            tag.decompose()
+
+        return content.get_text(
+            separator=" ",
+            strip=True
+        )[:4000]
+
+    except Exception as e:
+        print(f"    → 抓取失敗：{e}")
         return ""
 
 # ── 過濾非民航新聞 ────────────────────────────────
 def is_aviation_related(title, text):
     prompt = (
-        f"標題：{title}\n內容：{text[:500]}\n"
+        f"標題：{title}\n內容：{text[:300]}\n"
         f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
         f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
         f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
     )
-    result = call_gemini(prompt, primary="gemini-3.5-flash-lite", fallback="gemini-2.5-flash")
+    result = call_gemini(prompt, primary="gemini-2.5-flash-lite", fallback="gemini-2.5-flash")
     return "yes" in result.lower()
 
 # ── 翻譯+摘要 ─────────────────────────────────────
