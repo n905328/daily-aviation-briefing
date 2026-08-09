@@ -440,21 +440,17 @@ def fetch_rss():
 
 def send_email(sections):
     today = date.today().strftime("%Y/%m/%d")
-
-    body = f"✈️ 航空時事日報 {today}"
-
+    body = f"<h2>✈️ 航空時事日報 {today}</h2><hr>"
     for s in sections:
         body += f"""
-<br><br>
-<b>{s["source"]}</b><br>
-<a href="{s["url"]}">{s["summary"]}</a>
-"""
+<p><b>來源：</b>{s['source']} ｜ <a href="{s['url']}">{s['url']}</a></p>
+<p style="font-family:sans-serif; line-height:1.8">{s['summary'].replace(chr(10), '<br>')}</p>
+<hr>"""
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"✈️ 航空時事日報 {today}"
     msg["From"] = GMAIL_USER
     msg["To"] = GMAIL_USER
-
     msg.attach(MIMEText(body, "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
