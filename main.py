@@ -15,7 +15,7 @@ RSS_FEEDS = [
     "https://simpleflying.com/feed/",
     "https://airlinereporter.com/feed",
     "https://theaircurrent.com/feed/",
-    "https://feeds.feedburner.com/AirlineGeeks",
+    "https://airlinegeeks.com/feed/",
 ]
 
 BCC_LIST = [
@@ -448,13 +448,13 @@ def send_email(sections):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"✈️ 航空時事日報 {today}"
     msg["From"] = GMAIL_USER
-    msg["To"] = GMAIL_USER
+    msg["To"] = "undisclosed-recipients:;"
     msg["Bcc"] = ", ".join(BCC_LIST)
     msg.attach(MIMEText(body, "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
         s.login(GMAIL_USER, GMAIL_PASS)
-        all_recipients = [GMAIL_USER] + BCC_LIST
+        all_recipients = BCC_LIST
         s.sendmail(GMAIL_USER, all_recipients, msg.as_string())
 
 
