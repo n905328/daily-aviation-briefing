@@ -31,7 +31,7 @@ client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # ── Gemini 呼叫（含自動換模型與 retry） ────────────
 
-def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite"):
+def call_gemini(prompt, primary="gemini-3.1-flash-lite", fallback="gemini-3.5-flash-lite"):
     for model in [primary, fallback]:
         for attempt in range(3):
             try:
@@ -40,20 +40,17 @@ def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-l
                     contents=prompt
                 )
                 return response.text
-
             except Exception as e:
-                if "429" in str(e):
-                    print(f"    → {model} 超過限制，等待60秒...")
-                    time.sleep(60)
-
+                if "429" in str(e) or "503" in str(e):
+                    wait = 30 * (attempt + 1)  # 30秒、60秒、90秒
+                    print(f"    → {model} 超過限制，等待{wait}秒...")
+                    time.sleep(wait)
                 elif "404" in str(e):
                     print(f"    → {model} 不存在，換備用模型")
                     break
-
                 else:
                     print(f"    → 錯誤：{e}")
                     break
-
     return ""
 
 
