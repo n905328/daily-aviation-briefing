@@ -1,4 +1,3 @@
-```python
 import os, json, smtplib, feedparser, requests, gspread, time
 from google import genai
 from google.genai import types
@@ -643,4 +642,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
