@@ -18,6 +18,10 @@ RSS_FEEDS = [
     "https://feeds.feedburner.com/AirlineGeeks",
 ]
 
+BCC_LIST = [
+    "wsj2343@gmail.com",
+]
+
 MAX_ARTICLES_PER_FEED = 15
 MAX_RSS_SECTIONS = 8
 MAX_ARTICLES_PER_SOURCE = 4
@@ -445,11 +449,13 @@ def send_email(sections):
     msg["Subject"] = f"✈️ 航空時事日報 {today}"
     msg["From"] = GMAIL_USER
     msg["To"] = GMAIL_USER
+    msg["Bcc"] = ", ".join(BCC_LIST)
     msg.attach(MIMEText(body, "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
         s.login(GMAIL_USER, GMAIL_PASS)
-        s.send_message(msg)
+        all_recipients = [GMAIL_USER] + BCC_LIST
+        s.sendmail(GMAIL_USER, all_recipients, msg.as_string())
 
 
 # ── 去重複 ────────────────────────────────────────
