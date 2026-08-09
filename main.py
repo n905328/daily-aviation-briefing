@@ -10,7 +10,7 @@ from datetime import date
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
     "https://simpleflying.com/feed/",
-    "https://asianaviation.com/feed/"
+    "https://asianaviation.com/feed/",
     "https://airlinereporter.com/feed",
     "https://theaircurrent.com/feed/",
     "https://worldairlinenews.com/feed",
@@ -23,6 +23,28 @@ GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_PASS = os.environ["GMAIL_APP_PASSWORD"]
 
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+
+# ── Gemini 呼叫（含自動換模型與retry） ────────────
+def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite):
+    for model in [primary, fallback]:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt
+                )
+                return response.text
+            except Exception as e:
+                if "429" in str(e):
+                    print(f"    → {model} 超過限制，等待60秒...")
+                    time.sleep(60)
+                elif "404" in str(e):
+                    print(f"    → {model} 不存在，換備用模型")
+                    break
+                else:
+                    print(f"    → 錯誤：{e}")
+                    break
+    return "摘要暫時無法生成，請直接點擊連結閱讀原文。"
 
 # ── Google Sheet ───────────────────────────────────
 def get_sheet():
@@ -58,44 +80,46 @@ def fetch_text(url):
 
 # ── 過濾非民航新聞 ────────────────────────────────
 def is_aviation_related(title, text):
-    try:
-        prompt = (
-            f"標題：{title}\n內容：{text[:500]}\n"
-            f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
-            f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
-            f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
-        )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt
-        )
-        return "yes" in response.text.lower()
-    except:
-        return True
+    prompt = (
+        f"標題：{title}\n內容：{text[:500]}\n"
+        f"請只回答 yes 或 no：這篇新聞是否與民用航空相關？"
+        f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
+        f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
+    )
+    result = call_gemini(prompt, primary="gemini-2.5-flash-lite", fallback="gemini-2.5-flash")
+    return "yes" in result.lower()
 
-# ── Gemini 翻譯+摘要 ──────────────────────────────
+# ── 翻譯+摘要 ─────────────────────────────────────
 def summarize(title, text):
-    try:
-        prompt = f"""以下是一篇航空新聞，請用繁體中文輸出：
+    prompt = f"""以下是一篇航空新聞，請用繁體中文輸出：
 
 標題：{title}
 內文：{text}
 
 不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號）。
-若要增加格式，可以使用 HTML/CSS 語法。
+可以使用 HTML/CSS 語法。請勿增加粗體、斜體以及底線以外的格式。
 請依以下格式輸出：
 
 【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
-【潛在提問】（1-3個問題，並引導思考，或是附上建議作答方向）"""
-        response = client.models.generate_content(
-            model="gemini-3.5-flash",
-            contents=prompt
-        )
-        return response.text
-    except Exception as e:
-        return f"摘要失敗：{e}"
+【潛在提問】（1-3個問題，並引導思考，或是附上建議作答方向）
+
+可參考以下範例：
+
+【標題】倫敦蓋威克機場（London Gatwick）在法律挑戰遭駁回後，將推進第二跑道擴建計畫
+
+【摘要】
+倫敦蓋威克機場因一項針對其擴建計畫的法律挑戰遭法院駁回，得以繼續推進第二跑道興建工程......
+
+【為什麼值得關注】
+這標誌著在環境法規與地方阻力壓力下，大型機場擴建仍有推進的可能......
+
+【潛在提問】
+1. 問題1，引導1
+2. 問題2，引導2
+3. 問題3，引導3"""
+    return call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite")
 
 # ── 抓 RSS ────────────────────────────────────────
 def fetch_rss():
@@ -155,7 +179,7 @@ def main():
     print(f"已處理URL數：{len(processed)}")
     sections = []
 
-    # 手動 URL
+    # 手動 URL（不限制篇數）
     pending = get_pending_urls(sheet)
     print(f"待處理URL數：{len(pending)}")
     for row_idx, url in pending:
@@ -169,10 +193,14 @@ def main():
             mark_done(sheet, row_idx)
             save_processed_url(sf, url)
 
-    # RSS
+    # RSS（最多8篇）
     articles = fetch_rss()
     print(f"RSS抓到文章數：{len(articles)}")
+    rss_sections = []
     for article in articles:
+        if len(rss_sections) >= 8:
+            print("    → 已達RSS上限，停止處理")
+            break
         print(f"  - {article['title']}")
         if article["url"] in processed:
             print(f"    → 已處理，跳過")
@@ -183,11 +211,13 @@ def main():
         if content:
             if is_aviation_related(article["title"], content):
                 summary = summarize(article["title"], content)
-                sections.append({"source": article["source"], "url": article["url"], "summary": summary})
+                rss_sections.append({"source": article["source"], "url": article["url"], "summary": summary})
                 save_processed_url(sf, article["url"])
             else:
                 print(f"    → 非民航相關，跳過")
                 save_processed_url(sf, article["url"])
+
+    sections.extend(rss_sections)
 
     print(f"處理完成，共 {len(sections)} 篇")
     if sections:
