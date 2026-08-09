@@ -25,7 +25,7 @@ GMAIL_PASS = os.environ["GMAIL_APP_PASSWORD"]
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # ── Gemini 呼叫（含自動換模型與retry） ────────────
-def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite):
+def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite“):
     for model in [primary, fallback]:
         for attempt in range(3):
             try:
@@ -86,7 +86,7 @@ def is_aviation_related(title, text):
         f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
         f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
     )
-    result = call_gemini(prompt, primary="gemini-2.5-flash-lite", fallback="gemini-2.5-flash")
+    result = call_gemini(prompt, primary="gemini-3.5-flash-lite", fallback="gemini-2.5-flash")
     return "yes" in result.lower()
 
 # ── 翻譯+摘要 ─────────────────────────────────────
