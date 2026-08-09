@@ -65,7 +65,7 @@ def is_aviation_related(title, text):
             f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
         )
         response = client.models.generate_content(
-            model="models/gemini-1.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt
         )
         return "yes" in response.text.lower()
@@ -87,7 +87,7 @@ def summarize(title, text):
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
 【潛在提問】（1-3個問題，並附上建議作答方向/引導思考）"""
         response = client.models.generate_content(
-            model="models/gemini-1.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt
         )
         return response.text
