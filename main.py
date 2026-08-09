@@ -90,7 +90,7 @@ def summarize(title, text):
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
 【潛在提問】（1-3個問題，並引導思考，或是附上建議作答方向）"""
         response = client.models.generate_content(
-            model="gemini-3.1-pro",
+            model="gemini-3.5-flash",
             contents=prompt
         )
         return response.text
