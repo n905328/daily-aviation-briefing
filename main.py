@@ -391,8 +391,8 @@ def summarize(title, text):
 
     return call_gemini(
         prompt,
-        primary="gemini-3.6-flash",
-        fallback="gemini-3.5-flash"
+        primary="gemini-3.5-flash-lite",
+        fallback="gemini-3.1-flash-lite"
     )
 
 
