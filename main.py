@@ -25,7 +25,7 @@ GMAIL_PASS = os.environ["GMAIL_APP_PASSWORD"]
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 # ── Gemini 呼叫（含自動換模型與retry） ────────────
-def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite“):
+def call_gemini(prompt, primary="gemini-3.5-flash", fallback="gemini-3.1-flash-lite"):
     for model in [primary, fallback]:
         for attempt in range(3):
             try:
