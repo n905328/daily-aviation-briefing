@@ -135,7 +135,7 @@ def is_aviation_related(title, text):
         f"（包含：商業航空、民航公司、民用機場、客機、貨機、飛安事故）"
         f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
     )
-    result = call_gemini(prompt, primary="gemini-2.5-flash-lite", fallback="gemini-2.5-flash")
+    result = call_gemini(prompt, primary="gemini-3.1-flash-lite", fallback="gemini-3.5-flash")
     return "yes" in result.lower()
 
 # ── 翻譯+摘要 ─────────────────────────────────────
