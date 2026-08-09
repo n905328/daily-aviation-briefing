@@ -1,4 +1,4 @@
-import os, json, smtplib, feedparser, requests, gspread
+import os, json, smtplib, feedparser, requests, gspread, time
 from google import genai
 from google.genai import types
 from bs4 import BeautifulSoup
@@ -9,12 +9,13 @@ from datetime import date
 
 # ── 設定 ──────────────────────────────────────────
 RSS_FEEDS = [
-    "https://theaircurrent.com/feed/",
     "https://simpleflying.com/feed/",
-    "https://www.aviationpros.com/rss/",
+    "https://asianaviation.com/feed/"
+    "https://airlinereporter.com/feed",
+    "https://theaircurrent.com/feed/",
+    "https://worldairlinenews.com/feed",
     "https://feeds.feedburner.com/AirlineGeeks",
     "https://www.ch-aviation.com/portal/rss",
-    "https://avherald.com/h?subscribe=newsfeed&opt=0&lang=0",
 ]
 
 SHEET_ID = os.environ["SHEET_ID"]
@@ -65,7 +66,7 @@ def is_aviation_related(title, text):
             f"（不包含：軍用飛機、戰鬥機、無人機軍事用途、太空）"
         )
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="gemini-2.5-flash-lite",
             contents=prompt
         )
         return "yes" in response.text.lower()
@@ -80,14 +81,16 @@ def summarize(title, text):
 標題：{title}
 內文：{text}
 
-請依以下格式輸出，不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號），若要增加格式，可以使用 HTML：
+不要使用任何 Markdown 語法（不要用 ** 、 * 、 # 等符號）。
+若要增加格式，可以使用 HTML/CSS 語法。
+請依以下格式輸出：
 
 【標題】（翻譯標題）
 【摘要】（3句話內說明這篇新聞的重點）
 【為什麼值得關注】（1句話，對航空從業人員或關注者的意義）
-【潛在提問】（1-3個問題，並附上建議作答方向/引導思考）"""
+【潛在提問】（1-3個問題，並引導思考，或是附上建議作答方向）"""
         response = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="gemini-3.1-pro",
             contents=prompt
         )
         return response.text
