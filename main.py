@@ -20,9 +20,11 @@ RSS_FEEDS = [
 
 BCC_LIST = [
     "wsj2343@gmail.com",
-    "abc@gmail.com",
-    "cde@gmail.com",
-    "feewf@gmail.com",
+    "johnazzan@gmail.com",
+    "Chen.bibi.silvia@gmail.com",
+    "joycetseng0525@gmail.com",
+    "cmt84701369@gmail.com",
+    "yunyunwang0222@gmail.com",
 ]
 
 MAX_ARTICLES_PER_FEED = 15
@@ -448,9 +450,9 @@ def send_email(sections):
 <p style="font-family:sans-serif; line-height:1.8">{s['summary'].replace(chr(10), '<br>')}</p>
 <hr>"""
     body += """
-<hr>
-<p style="font-size:12px; color:gray; text-align:center;">
-如果不想繼續收到這封信，請以空白內容回覆此信件。移除名單後的一週仍有可能收到信件。
+
+<p style="font-size:12px; color:gray;">
+如果不想繼續收到航空時事日報，請以空白內容回覆此信件。移除名單後的一週內仍有可能收到信件。
 </p>
 """
 
