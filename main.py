@@ -20,11 +20,9 @@ RSS_FEEDS = [
 
 BCC_LIST = [
     "wsj2343@gmail.com",
-    "johnazzan@gmail.com",
-    "Chen.bibi.silvia@gmail.com",
-    "joycetseng0525@gmail.com",
-    "cmt84701369@gmail.com",
-    "yunyunwang0222@gmail.com",
+    "abc@gmail.com",
+    "cde@gmail.com",
+    "feewf@gmail.com",
 ]
 
 MAX_ARTICLES_PER_FEED = 15
@@ -449,19 +447,23 @@ def send_email(sections):
 <p><b>來源：</b>{s['source']} ｜ <a href="{s['url']}">{s['url']}</a></p>
 <p style="font-family:sans-serif; line-height:1.8">{s['summary'].replace(chr(10), '<br>')}</p>
 <hr>"""
+    body += """
+<hr>
+<p style="font-size:12px; color:gray; text-align:center;">
+如果不想繼續收到這封信，請以空白內容回覆此信件。移除名單後的一週仍有可能收到信件。
+</p>
+"""
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"✈️ 航空時事日報 {today}"
     msg["From"] = GMAIL_USER
     msg["To"] = "undisclosed-recipients:;"
-    msg["Bcc"] = ", ".join(BCC_LIST)
+    # 注意：完全不加 msg["Bcc"]，BCC 只透過 sendmail() 傳遞
     msg.attach(MIMEText(body, "html"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
         s.login(GMAIL_USER, GMAIL_PASS)
-        all_recipients = BCC_LIST
-        s.sendmail(GMAIL_USER, all_recipients, msg.as_string())
-
+        s.sendmail(GMAIL_USER, BCC_LIST, msg.as_string())
 
 # ── 去重複 ────────────────────────────────────────
 
