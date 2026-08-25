@@ -21,3 +21,4 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
+          BCC_LIST: ${{ secrets.BCC_LIST }}
