@@ -10,7 +10,7 @@ from datetime import date
 # ── 設定 ──────────────────────────────────────────
 
 RSS_FEEDS = [
-    "https://worldairlinenews.com/feed",
+    "https://worldairlinenews.com/feed",  
     "https://asianaviation.com/feed/",
     "https://simpleflying.com/feed/",
     "https://airlinereporter.com/feed",
